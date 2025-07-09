@@ -1,4 +1,4 @@
-// Modern Cloud Dashboard Application
+// Modern Cloud Dashboard Application - Vanilla JavaScript
 class CloudDashboard {
   constructor() {
     console.log("CloudDashboard constructor called");
@@ -21,6 +21,24 @@ class CloudDashboard {
     console.log("CloudDashboard initialization complete");
   }
 
+  // Helper functions to replace jQuery
+  $(selector) {
+    if (selector.startsWith('#')) {
+      return document.getElementById(selector.slice(1));
+    }
+    return document.querySelector(selector);
+  }
+
+  $$(selector) {
+    return document.querySelectorAll(selector);
+  }
+
+  createElement(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.firstElementChild;
+  }
+
   // Time Update
   initializeTimeUpdate() {
     const updateTime = () => {
@@ -30,7 +48,8 @@ class CloudDashboard {
         minute: "2-digit",
         hour12: true,
       });
-      $("#systemTime").text(time);
+      const systemTime = this.$('#systemTime');
+      if (systemTime) systemTime.textContent = time;
     };
     updateTime();
     setInterval(updateTime, 1000);
@@ -38,45 +57,61 @@ class CloudDashboard {
 
   // Theme Management
   initializeTheme() {
-    const htmlElement = $("html");
+    const htmlElement = document.documentElement;
     const savedTheme = localStorage.getItem("theme") || "light";
-    htmlElement.removeClass("light dark").addClass(savedTheme);
+    htmlElement.className = savedTheme;
 
-    $("#themeToggle").click(() => {
-      const currentTheme = htmlElement.hasClass("light") ? "light" : "dark";
-      const newTheme = currentTheme === "light" ? "dark" : "light";
-      htmlElement.removeClass(currentTheme).addClass(newTheme);
-      localStorage.setItem("theme", newTheme);
-    });
+    const themeToggle = this.$('#themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = htmlElement.classList.contains("light") ? "light" : "dark";
+        const newTheme = currentTheme === "light" ? "dark" : "light";
+        htmlElement.className = newTheme;
+        localStorage.setItem("theme", newTheme);
+      });
+    }
   }
 
   // Profile Dropdown
   initializeProfileDropdown() {
-    $("#profileBtn").click((e) => {
-      e.stopPropagation();
-      $("#profileDropdown").toggleClass("hidden");
-    });
+    const profileBtn = this.$('#profileBtn');
+    const profileDropdown = this.$('#profileDropdown');
+    
+    if (profileBtn && profileDropdown) {
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileDropdown.classList.toggle("hidden");
+      });
 
-    $(document).click((e) => {
-      if (!$(e.target).closest("#profileBtn, #profileDropdown").length) {
-        $("#profileDropdown").addClass("hidden");
-      }
-    });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest("#profileBtn") && !e.target.closest("#profileDropdown")) {
+          profileDropdown.classList.add("hidden");
+        }
+      });
+    }
   }
 
   // Sidebar Management
   initializeSidebar() {
-    $("#closeSidebar, #mobileMenu, #notificationToggle").click(() => {
-      const sidebar = $("#sidebar");
-      if (sidebar.hasClass("w-80")) {
-        sidebar.removeClass("w-80").addClass("w-0");
-        sidebar.find("> *").hide();
-      } else {
-        sidebar.removeClass("w-0").addClass("w-80");
-        setTimeout(() => {
-          sidebar.find("> *").show();
-        }, 100);
-      }
+    const sidebar = this.$('#sidebar');
+    const closeBtns = this.$$('#closeSidebar, #mobileMenu, #notificationToggle');
+    
+    closeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (sidebar.classList.contains("w-80")) {
+          sidebar.classList.remove("w-80");
+          sidebar.classList.add("w-0");
+          // Hide direct children
+          Array.from(sidebar.children).forEach(el => el.style.display = 'none');
+        } else {
+          sidebar.classList.remove("w-0");
+          sidebar.classList.add("w-80");
+          setTimeout(() => {
+            // Show direct children
+            Array.from(sidebar.children).forEach(el => el.style.display = '');
+          }, 100);
+        }
+      });
     });
   }
 
@@ -93,51 +128,72 @@ class CloudDashboard {
       photos: "fas fa-images",
     };
 
-    $(".app-card").click((e) => {
-      const appName = $(e.currentTarget).find("p").text();
-      const appKey = $(e.currentTarget).data("app");
+    const appCards = this.$$(".app-card");
+    const appModal = this.$('#appModal');
+    const modalContent = this.$('#modalContent');
+    const modalTitle = this.$('#modalTitle');
+    const modalIcon = this.$('#modalIcon');
+    const cancelModal = this.$('#cancelModal');
+    const launchApp = this.$('#launchApp');
 
-      $("#modalTitle").text(appName);
-      $("#modalIcon").attr("class", appIcons[appKey] || "fas fa-rocket");
-      $("#appModal").removeClass("hidden").addClass("flex");
+    appCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const appName = card.querySelector("p").textContent;
+        const appKey = card.dataset.app;
 
-      setTimeout(() => {
-        $("#modalContent")
-          .removeClass("scale-95 opacity-0")
-          .addClass("scale-100 opacity-100");
-      }, 10);
+        modalTitle.textContent = appName;
+        modalIcon.className = appIcons[appKey] || "fas fa-rocket";
+        appModal.classList.remove("hidden");
+        appModal.classList.add("flex");
+
+        setTimeout(() => {
+          modalContent.classList.remove("scale-95", "opacity-0");
+          modalContent.classList.add("scale-100", "opacity-100");
+        }, 10);
+      });
     });
 
-    $("#cancelModal, #appModal").click((e) => {
-      if (e.target === e.currentTarget || $(e.target).attr("id") === "cancelModal") {
-        $("#modalContent")
-          .removeClass("scale-100 opacity-100")
-          .addClass("scale-95 opacity-0");
-        setTimeout(() => {
-          $("#appModal").addClass("hidden").removeClass("flex");
-        }, 300);
+    // Close Modal
+    [cancelModal, appModal].forEach(el => {
+      if (el) {
+        el.addEventListener('click', (e) => {
+          if (e.target === el || e.target.id === "cancelModal") {
+            modalContent.classList.remove("scale-100", "opacity-100");
+            modalContent.classList.add("scale-95", "opacity-0");
+            setTimeout(() => {
+              appModal.classList.add("hidden");
+              appModal.classList.remove("flex");
+            }, 300);
+          }
+        });
       }
     });
 
-    $("#launchApp").click(() => {
-      const appName = $("#modalTitle").text();
-      const appKey = $(".app-card").filter((i, el) => $(el).find("p").text() === appName).data("app");
+    // Launch App
+    if (launchApp) {
+      launchApp.addEventListener('click', () => {
+        const appName = modalTitle.textContent;
+        const appKey = Array.from(appCards).find(card => 
+          card.querySelector("p").textContent === appName
+        )?.dataset.app;
 
-      // Close modal
-      $("#modalContent")
-        .removeClass("scale-100 opacity-100")
-        .addClass("scale-95 opacity-0");
-      setTimeout(() => {
-        $("#appModal").addClass("hidden").removeClass("flex");
-      }, 300);
+        // Close modal
+        modalContent.classList.remove("scale-100", "opacity-100");
+        modalContent.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+          appModal.classList.add("hidden");
+          appModal.classList.remove("flex");
+        }, 300);
 
-      // Launch the application window
-      this.launchApplication(appName, appKey);
-    });
+        // Launch the application window
+        this.launchApplication(appName, appKey);
+      });
+    }
   }
 
   // Desktop Icons
   initializeDesktop() {
+    console.log("Initializing desktop icons...");
     const apps = [
       { name: "Drive", key: "drive", icon: "fab fa-google-drive", gradient: "icon-gradient-1" },
       { name: "Dropbox", key: "dropbox", icon: "fab fa-dropbox", gradient: "icon-gradient-2" },
@@ -149,11 +205,12 @@ class CloudDashboard {
       { name: "Photos", key: "photos", icon: "fas fa-images", gradient: "icon-gradient-8" },
     ];
 
-    const desktopContainer = $('<div class="desktop-icons-container"></div>');
-    $("body").append(desktopContainer);
+    const desktopContainer = this.createElement('<div class="desktop-icons-container"></div>');
+    document.body.appendChild(desktopContainer);
+    console.log("Desktop container created and appended");
 
     apps.forEach((app, index) => {
-      const icon = $(`
+      const icon = this.createElement(`
         <div class="desktop-icon" data-app="${app.key}">
           <div class="desktop-icon-image ${app.gradient}">
             <i class="${app.icon}"></i>
@@ -162,16 +219,20 @@ class CloudDashboard {
         </div>
       `);
 
-      icon.click(() => this.launchApplication(app.name, app.key));
-      icon.dblclick(() => this.launchApplication(app.name, app.key));
-      desktopContainer.append(icon);
+      icon.addEventListener('click', () => this.launchApplication(app.name, app.key));
+      icon.addEventListener('dblclick', () => this.launchApplication(app.name, app.key));
+      desktopContainer.appendChild(icon);
     });
+    
+    console.log(`Created ${apps.length} desktop icons`);
   }
 
   // Taskbar
   initializeTaskbar() {
-    const taskbar = $('<div class="taskbar"></div>');
-    $("body").append(taskbar);
+    console.log("Initializing taskbar...");
+    const taskbar = this.createElement('<div class="taskbar"></div>');
+    document.body.appendChild(taskbar);
+    console.log("Taskbar created and appended");
   }
 
   // Launch Application
@@ -191,21 +252,23 @@ class CloudDashboard {
     this.addToTaskbar(appName, appKey, window);
 
     // Show success message
-    $("#successText").text(`${appName} is opening...`);
-    $("#successMessage")
-      .removeClass("translate-x-[120%]")
-      .addClass("translate-x-0");
+    const successText = this.$('#successText');
+    const successMessage = this.$('#successMessage');
+    if (successText && successMessage) {
+      successText.textContent = `${appName} is opening...`;
+      successMessage.classList.remove("translate-x-[120%]");
+      successMessage.classList.add("translate-x-0");
 
-    setTimeout(() => {
-      $("#successMessage")
-        .removeClass("translate-x-0")
-        .addClass("translate-x-[120%]");
-    }, 3000);
+      setTimeout(() => {
+        successMessage.classList.remove("translate-x-0");
+        successMessage.classList.add("translate-x-[120%]");
+      }, 3000);
+    }
   }
 
   // Create Window
   createWindow(windowId, appName, appKey) {
-    const window = $(`
+    const window = this.createElement(`
       <div class="desktop-app-window" id="${windowId}" data-app="${appKey}">
         <div class="window-titlebar">
           <div class="window-title">${appName}</div>
@@ -223,28 +286,30 @@ class CloudDashboard {
 
     // Position window
     const offset = this.openWindows.size * 30;
-    window.css({
-      left: 200 + offset,
-      top: 150 + offset,
-      width: 800,
-      height: 600,
+    Object.assign(window.style, {
+      left: `${200 + offset}px`,
+      top: `${150 + offset}px`,
+      width: '800px',
+      height: '600px',
       zIndex: ++this.windowZIndex
     });
 
     // Add window controls
-    window.find(".window-control").click((e) => {
-      const action = $(e.target).data("action");
-      switch (action) {
-        case "close":
-          this.closeWindow(window, appKey);
-          break;
-        case "minimize":
-          this.minimizeWindow(window);
-          break;
-        case "maximize":
-          this.maximizeWindow(window);
-          break;
-      }
+    window.querySelectorAll(".window-control").forEach(control => {
+      control.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        switch (action) {
+          case "close":
+            this.closeWindow(window, appKey);
+            break;
+          case "minimize":
+            this.minimizeWindow(window);
+            break;
+          case "maximize":
+            this.maximizeWindow(window);
+            break;
+        }
+      });
     });
 
     // Make window draggable
@@ -254,9 +319,9 @@ class CloudDashboard {
     this.makeResizable(window);
 
     // Add click focus
-    window.click(() => this.focusWindow(window));
+    window.addEventListener('click', () => this.focusWindow(window));
 
-    $("body").append(window);
+    document.body.appendChild(window);
     return window;
   }
 
@@ -437,9 +502,9 @@ class CloudDashboard {
 
   // Window Management
   focusWindow(window) {
-    $(".desktop-app-window").removeClass("window-focused");
-    window.addClass("window-focused");
-    window.css("zIndex", ++this.windowZIndex);
+    document.querySelectorAll(".desktop-app-window").forEach(w => w.classList.remove("window-focused"));
+    window.classList.add("window-focused");
+    window.style.zIndex = ++this.windowZIndex;
     this.focusedWindow = window;
     this.updateTaskbarActive(window);
   }
@@ -447,7 +512,8 @@ class CloudDashboard {
   closeWindow(window, appKey) {
     window.remove();
     this.openWindows.delete(appKey);
-    $(`.taskbar-item[data-app="${appKey}"]`).remove();
+    const taskbarItem = document.querySelector(`.taskbar-item[data-app="${appKey}"]`);
+    if (taskbarItem) taskbarItem.remove();
     
     if (this.focusedWindow === window) {
       this.focusedWindow = null;
@@ -455,52 +521,53 @@ class CloudDashboard {
   }
 
   minimizeWindow(window) {
-    window.addClass("window-minimized");
-    const appKey = window.data("app");
-    const taskbarItem = $(`.taskbar-item[data-app="${appKey}"]`);
-    taskbarItem.removeClass("active");
+    window.classList.add("window-minimized");
+    const appKey = window.dataset.app;
+    const taskbarItem = document.querySelector(`.taskbar-item[data-app="${appKey}"]`);
+    if (taskbarItem) taskbarItem.classList.remove("active");
   }
 
   restoreWindow(window) {
-    window.removeClass("window-minimized");
+    window.classList.remove("window-minimized");
     this.focusWindow(window);
   }
 
   maximizeWindow(window) {
-    const isMaximized = window.data("maximized");
+    const isMaximized = window.dataset.maximized === 'true';
     
     if (isMaximized) {
       // Restore
-      const originalData = window.data("original");
-      window.css({
-        left: originalData.left,
-        top: originalData.top,
-        width: originalData.width,
-        height: originalData.height
+      const originalData = JSON.parse(window.dataset.original || '{}');
+      Object.assign(window.style, {
+        left: originalData.left || '200px',
+        top: originalData.top || '150px',
+        width: originalData.width || '800px',
+        height: originalData.height || '600px'
       });
-      window.removeData("maximized original");
+      delete window.dataset.maximized;
+      delete window.dataset.original;
     } else {
       // Maximize
       const original = {
-        left: window.css("left"),
-        top: window.css("top"),
-        width: window.css("width"),
-        height: window.css("height")
+        left: window.style.left,
+        top: window.style.top,
+        width: window.style.width,
+        height: window.style.height
       };
-      window.data("original", original);
-      window.css({
-        left: 0,
-        top: 0,
-        width: "100vw",
-        height: "calc(100vh - 60px)"
+      window.dataset.original = JSON.stringify(original);
+      Object.assign(window.style, {
+        left: '0px',
+        top: '0px',
+        width: '100vw',
+        height: 'calc(100vh - 60px)'
       });
-      window.data("maximized", true);
+      window.dataset.maximized = 'true';
     }
   }
 
   // Taskbar Management
   addToTaskbar(appName, appKey, window) {
-    const taskbar = $(".taskbar");
+    const taskbar = document.querySelector(".taskbar");
     const appIcons = {
       drive: "fab fa-google-drive",
       dropbox: "fab fa-dropbox",
@@ -512,14 +579,14 @@ class CloudDashboard {
       photos: "fas fa-images",
     };
 
-    const taskbarItem = $(`
+    const taskbarItem = this.createElement(`
       <div class="taskbar-item active" data-app="${appKey}" title="${appName}">
         <i class="${appIcons[appKey] || 'fas fa-window-maximize'} text-primary"></i>
       </div>
     `);
 
-    taskbarItem.click(() => {
-      if (window.hasClass("window-minimized")) {
+    taskbarItem.addEventListener('click', () => {
+      if (window.classList.contains("window-minimized")) {
         this.restoreWindow(window);
       } else if (this.focusedWindow === window) {
         this.minimizeWindow(window);
@@ -528,13 +595,14 @@ class CloudDashboard {
       }
     });
 
-    taskbar.append(taskbarItem);
+    taskbar.appendChild(taskbarItem);
   }
 
   updateTaskbarActive(window) {
-    $(".taskbar-item").removeClass("active");
-    const appKey = window.data("app");
-    $(`.taskbar-item[data-app="${appKey}"]`).addClass("active");
+    document.querySelectorAll(".taskbar-item").forEach(item => item.classList.remove("active"));
+    const appKey = window.dataset.app;
+    const taskbarItem = document.querySelector(`.taskbar-item[data-app="${appKey}"]`);
+    if (taskbarItem) taskbarItem.classList.add("active");
   }
 
   // Make Window Draggable
@@ -542,38 +610,36 @@ class CloudDashboard {
     let isDragging = false;
     let startX, startY, startLeft, startTop;
 
-    const titlebar = window.find(".window-titlebar");
+    const titlebar = window.querySelector(".window-titlebar");
     
-    titlebar.mousedown((e) => {
-      if ($(e.target).hasClass("window-control")) return;
+    titlebar.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains("window-control")) return;
       
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
-      startLeft = parseInt(window.css("left"));
-      startTop = parseInt(window.css("top"));
+      startLeft = parseInt(window.style.left);
+      startTop = parseInt(window.style.top);
       
-      window.css("user-select", "none");
-      $("body").css("user-select", "none");
+      window.style.userSelect = "none";
+      document.body.style.userSelect = "none";
     });
 
-    $(document).mousemove((e) => {
+    document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
 
       const deltaX = e.clientX - startX;
       const deltaY = e.clientY - startY;
       
-      window.css({
-        left: startLeft + deltaX,
-        top: Math.max(0, startTop + deltaY)
-      });
+      window.style.left = `${startLeft + deltaX}px`;
+      window.style.top = `${Math.max(0, startTop + deltaY)}px`;
     });
 
-    $(document).mouseup(() => {
+    document.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false;
-        window.css("user-select", "");
-        $("body").css("user-select", "");
+        window.style.userSelect = "";
+        document.body.style.userSelect = "";
       }
     });
   }
@@ -581,24 +647,24 @@ class CloudDashboard {
   // Make Window Resizable
   makeResizable(window) {
     // Simple resize handle in bottom-right corner
-    const resizeHandle = $('<div style="position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; cursor: se-resize; z-index: 10;"></div>');
-    window.append(resizeHandle);
+    const resizeHandle = this.createElement('<div style="position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; cursor: se-resize; z-index: 10;"></div>');
+    window.appendChild(resizeHandle);
 
     let isResizing = false;
     let startX, startY, startWidth, startHeight;
 
-    resizeHandle.mousedown((e) => {
+    resizeHandle.addEventListener('mousedown', (e) => {
       isResizing = true;
       startX = e.clientX;
       startY = e.clientY;
-      startWidth = parseInt(window.css("width"));
-      startHeight = parseInt(window.css("height"));
+      startWidth = parseInt(window.style.width);
+      startHeight = parseInt(window.style.height);
       
       e.preventDefault();
-      $("body").css("user-select", "none");
+      document.body.style.userSelect = "none";
     });
 
-    $(document).mousemove((e) => {
+    document.addEventListener('mousemove', (e) => {
       if (!isResizing) return;
 
       const deltaX = e.clientX - startX;
@@ -607,39 +673,35 @@ class CloudDashboard {
       const newWidth = Math.max(400, startWidth + deltaX);
       const newHeight = Math.max(300, startHeight + deltaY);
       
-      window.css({
-        width: newWidth,
-        height: newHeight
-      });
+      window.style.width = `${newWidth}px`;
+      window.style.height = `${newHeight}px`;
     });
 
-    $(document).mouseup(() => {
+    document.addEventListener('mouseup', () => {
       if (isResizing) {
         isResizing = false;
-        $("body").css("user-select", "");
+        document.body.style.userSelect = "";
       }
     });
   }
 
   // Window Resize Handler
   initializeWindowResize() {
-    $(window).resize(() => {
+    window.addEventListener('resize', () => {
+      const sidebar = this.$('#sidebar');
       if (window.innerWidth >= 1024) {
-        $("#sidebar").removeClass("w-0").addClass("w-80");
-        $("#sidebar").find("> *").show();
+        sidebar.classList.remove("w-0");
+        sidebar.classList.add("w-80");
+        Array.from(sidebar.children).forEach(el => el.style.display = '');
       }
     });
 
     // Initialize sidebar state
     if (window.innerWidth < 1024) {
-      $("#sidebar").removeClass("w-80").addClass("w-0");
-      $("#sidebar").find("> *").hide();
+      const sidebar = this.$('#sidebar');
+      sidebar.classList.remove("w-80");
+      sidebar.classList.add("w-0");
+      Array.from(sidebar.children).forEach(el => el.style.display = 'none');
     }
   }
 }
-
-// Initialize Dashboard when DOM is ready
-$(document).ready(() => {
-  console.log("DOM ready, initializing CloudDashboard...");
-  new CloudDashboard();
-});

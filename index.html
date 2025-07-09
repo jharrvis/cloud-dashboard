@@ -16,8 +16,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Remove jQuery dependency -->
     <!-- External Stylesheets -->
     <link rel="stylesheet" href="assets/css/style.css" />
   </head>
@@ -875,5 +874,26 @@
 
     <!-- External JavaScript -->
     <script src="assets/js/main.js"></script>
+    <script>
+      // Initialize when window loads (all scripts should be loaded by then)
+      window.addEventListener('load', function() {
+        console.log('Window loaded, initializing CloudDashboard...');
+        
+        if (typeof CloudDashboard === 'undefined') {
+          console.error('CloudDashboard class not found!');
+          alert('Error: CloudDashboard class not found.');
+          return;
+        }
+        
+        console.log('Initializing CloudDashboard...');
+        try {
+          window.dashboard = new CloudDashboard();
+          console.log('CloudDashboard instance created successfully');
+        } catch (error) {
+          console.error('Error creating CloudDashboard:', error);
+          alert('Error creating CloudDashboard: ' + error.message);
+        }
+      });
+    </script>
   </body>
 </html>
